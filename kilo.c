@@ -4,20 +4,25 @@
 #include <termios.h>
 #include <stdlib.h>
 
-// ==================================================================
-// disabling raw mode
-void disableRawMode(void){
+// struct to store original attributes of terminal
+struct termios orig_termios; // struct to store the terminal attributes read by tcgetattr
 
+// ==================================================================
+// disabling raw mode at exit 
+void disableRawMode(void){
+  tcsetattr(STDIN_FILENO, TCSAFLUSH, &orig_termios); // sets terminal attributes to original one
 }
 
 // ==================================================================
 // enabling raw mode
 void enableRawMode(void){
-  struct termios raw; // struct to store the terminal attributes read by tcgetattr
+  tcgetattr(STDIN_FILENO, &orig_termios); // reads terminal attributes
+  atexit(disableRawMode); // register disableRawMode function to be called
+  // automatically when the program exits
 
-  tcgetattr(STDIN_FILENO, &raw); // reads terminal attributes
-
-  raw.c_lflag &= ~(ECHO); // reverses the bits of echo i.e., flipping bits 
+  struct termios raw = orig_termios; // struct that copies original terminal
+  // attributes to enable raw mode
+  raw.c_lflag &= ~(ECHO | ICANON); // reverses the bits of echo i.e., flipping bits 
 
   tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw); // apply terminal attributes
 }
