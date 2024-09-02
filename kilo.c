@@ -3,6 +3,8 @@
 #include <unistd.h>
 #include <termios.h>
 #include <stdlib.h>
+#include <stdio.h>
+#include <ctype.h>
 
 // struct to store original attributes of terminal
 struct termios orig_termios; // struct to store the terminal attributes read by tcgetattr
@@ -34,6 +36,12 @@ int main(void){
 
   char c; // stores input from the keyboard
   // asking read() to 1 byte from the standard input into the variable c
-  while (read(STDIN_FILENO, &c, 1) == 1 && c != 'q');
+  while (read(STDIN_FILENO, &c, 1) == 1 && c != 'q'){
+    if (iscntrl(c)){ // tests whether a character is a control character (non-printable characters) 
+      printf("%d\n", c);
+    } else {
+      printf("%d ('%c')\n", c, c);
+    }
+  }
   return 0;
 }
