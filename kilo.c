@@ -1,3 +1,5 @@
+/*** includes ***/
+
 #include <asm-generic/termbits.h>
 #include <bits/termios_inlines.h>
 #include <ctype.h>
@@ -7,21 +9,20 @@
 #include <termios.h>
 #include <unistd.h>
 
+/*** data ***/
 // struct to store original attributes of terminal
 struct termios
     orig_termios; // struct to store the terminal attributes read by tcgetattr
 
-//============================================================================================================
-/* Expection handling
- * a function that prints an error message and  exits the program  .
- */
+/*** terminal ***/
 
+// Expection handling
+// a function that prints an error message and  exits the program  .
 void die(const char *s) {
   perror(s);
   exit(1);
 }
 
-// =========================================================================================================
 // disabling raw mode at exit
 void disableRawMode(void) {
   if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &orig_termios) ==
@@ -30,7 +31,6 @@ void disableRawMode(void) {
   }
 }
 
-// =========================================================================================================
 // enabling raw mode
 void enableRawMode(void) {
   if (tcgetattr(STDIN_FILENO, &orig_termios) == -1)
@@ -53,8 +53,7 @@ void enableRawMode(void) {
     die("tcsetattr"); // apply terminal attributes
 }
 
-// =========================================================================================================
-// main
+/*** init ***/
 int main(void) {
   enableRawMode();
 
