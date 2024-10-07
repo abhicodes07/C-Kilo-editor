@@ -68,6 +68,10 @@ char editorReadKey() {
   return c;
 }
 
+/*** output ***/
+
+void editorRefreshScreen() { write(STDIN_FILENO, "\x1b[2j", 4); }
+
 /*** input ***/
 // deals with mapping keys to editor functions at a much higher level
 void editorProcessKeypress() {
@@ -85,6 +89,7 @@ int main(void) {
   enableRawMode();
 
   while (1) {
+    editorRefreshScreen();
     editorProcessKeypress();
   }
   return 0;
