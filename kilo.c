@@ -10,6 +10,16 @@
 struct termios
     orig_termios; // struct to store the terminal attributes read by tcgetattr
 
+//============================================================================================================
+/* Expection handling
+ * a function that prints an error message and  exits the program  .
+ */
+
+void die(const char *s) {
+  perror(s);
+  exit(1);
+}
+
 // =========================================================================================================
 // disabling raw mode at exit
 void disableRawMode(void) {
