@@ -1,6 +1,7 @@
 #include <asm-generic/termbits.h>
 #include <bits/termios_inlines.h>
 #include <ctype.h>
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <termios.h>
@@ -23,14 +24,18 @@ void die(const char *s) {
 // =========================================================================================================
 // disabling raw mode at exit
 void disableRawMode(void) {
-  tcsetattr(STDIN_FILENO, TCSAFLUSH,
-            &orig_termios); // sets terminal attributes to original one
+  if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &orig_termios) ==
+      -1) { // sets terminal attributes to original one
+    die("tcsetattr");
+  }
 }
 
 // =========================================================================================================
 // enabling raw mode
 void enableRawMode(void) {
-  tcgetattr(STDIN_FILENO, &orig_termios); // reads terminal attributes
+  if (tcgetattr(STDIN_FILENO, &orig_termios) == -1)
+    die("tcsetattr"); // reads terminal attributes
+
   atexit(disableRawMode); // register disableRawMode function to be called
   // automatically when the program exits
 
@@ -44,7 +49,8 @@ void enableRawMode(void) {
                    ISIG); // reverses the bits of echo i.e., flipping bits
   raw.c_cc[VMIN] = 0;
   raw.c_cc[VTIME] = 1;
-  tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw); // apply terminal attributes
+  if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw) == -1)
+    die("tcsetattr"); // apply terminal attributes
 }
 
 // =========================================================================================================
@@ -56,6 +62,8 @@ int main(void) {
     char c = '\0'; // stores input from the keyboard
     // asking read() to 1 byte from the standard input into the variable c
     read(STDIN_FILENO, &c, 1);
+    if (read(STDIN_FILENO, &c, 1) == -1 && errno != EAGAIN)
+      die("read");
     if (iscntrl(c)) { // tests whether a character is a control character
                       // (non-printable characters)
       printf("%d\r\n", c);
