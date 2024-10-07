@@ -9,12 +9,17 @@
 #include <termios.h>
 #include <unistd.h>
 
+/*** defines ***/
+
+#define CTRL_KEY(k) ((k) & 0x1f)
+
 /*** data ***/
 // struct to store original attributes of terminal
 struct termios
     orig_termios; // struct to store the terminal attributes read by tcgetattr
 
 /*** terminal ***/
+// deals with low level terminal input
 
 // Expection handling
 // a function that prints an error message and  exits the program  .
@@ -53,24 +58,34 @@ void enableRawMode(void) {
     die("tcsetattr"); // apply terminal attributes
 }
 
+char editorReadKey() {
+  int nread;
+  char c;
+  while ((nread = read(STDIN_FILENO, &c, 1)) != 1) {
+    if (nread == -1 && errno != EAGAIN)
+      die("read");
+  }
+  return c;
+}
+
+/*** input ***/
+// deals with mapping keys to editor functions at a much higher level
+void editorProcessKeypress() {
+  char c = editorReadKey();
+
+  switch (c) {
+  case CTRL_KEY('q'):
+    exit(0);
+    break;
+  }
+}
+
 /*** init ***/
 int main(void) {
   enableRawMode();
 
   while (1) {
-    char c = '\0'; // stores input from the keyboard
-    // asking read() to 1 byte from the standard input into the variable c
-    read(STDIN_FILENO, &c, 1);
-    if (read(STDIN_FILENO, &c, 1) == -1 && errno != EAGAIN)
-      die("read");
-    if (iscntrl(c)) { // tests whether a character is a control character
-                      // (non-printable characters)
-      printf("%d\r\n", c);
-    } else {
-      printf("%d ('%c')\r\n", c, c);
-    }
-    if (c == 'q')
-      break;
+    editorProcessKeypress();
   }
   return 0;
 }
