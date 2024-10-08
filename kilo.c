@@ -13,17 +13,29 @@
 
 #define CTRL_KEY(k) ((k) & 0x1f)
 
-/*** data ***/
+/*** data
+ * ===========================================================================
+ * ***/
+
 // struct to store original attributes of terminal
 struct termios
     orig_termios; // struct to store the terminal attributes read by tcgetattr
 
-/*** terminal ***/
+struct editorConfig {
+  struct termios orig_termios;
+};
+
+struct editorConfig E;
+
+/*** terminal
+ * ====================================================================== ***/
 // deals with low level terminal input
 
-// Expection handling
-// a function that prints an error message and  exits the program  .
 void die(const char *s) {
+  /*
+   * a function that prints an error message and  exits the program .
+   */
+
   // clear screen on exit
   write(STDOUT_FILENO, "\x1b[J", 4);
   write(STDOUT_FILENO, "\x1b[H", 3);
@@ -34,7 +46,7 @@ void die(const char *s) {
 
 // disabling raw mode at exit
 void disableRawMode(void) {
-  if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &orig_termios) ==
+  if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &E.orig_termios) ==
       -1) { // sets terminal attributes to original one
     die("tcsetattr");
   }
@@ -42,13 +54,13 @@ void disableRawMode(void) {
 
 // enabling raw mode
 void enableRawMode(void) {
-  if (tcgetattr(STDIN_FILENO, &orig_termios) == -1)
+  if (tcgetattr(STDIN_FILENO, &E.orig_termios) == -1)
     die("tcsetattr"); // reads terminal attributes
 
   atexit(disableRawMode); // register disableRawMode function to be called
   // automatically when the program exits
 
-  struct termios raw = orig_termios; // struct that copies original terminal
+  struct termios raw = E.orig_termios; // struct that copies original terminal
   // attributes to enable raw mode
   raw.c_iflag &=
       ~(BRKINT | ICRNL | INPCK | ISTRIP | IXON); // disable ctrl-S and ctrl-Q
@@ -74,7 +86,9 @@ char editorReadKey(void) {
   return c;
 }
 
-/*** Input ***/
+/*** Input
+ * ===========================================================================
+ * ***/
 // deals with mapping keys to editor functions at a much higher level
 
 void editorProcessKeypress(void) {
@@ -93,7 +107,8 @@ void editorProcessKeypress(void) {
   }
 }
 
-/*** output ***/
+/*** output
+ * ======================================================================== ***/
 
 void editorDrawRows(void) {
   int y;
@@ -112,7 +127,8 @@ void editorRefreshScreen(void) {
   write(STDOUT_FILENO, "\x1b[H", 3);
 }
 
-/*** init ***/
+/*** init
+ * ======================================================================= ***/
 int main(void) {
   enableRawMode();
 
