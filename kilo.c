@@ -1,11 +1,13 @@
 /*** includes ***/
 
 #include <asm-generic/termbits.h>
+#include <bits/ioctl.h>
 #include <bits/termios_inlines.h>
 #include <ctype.h>
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/ioctl.h>
 #include <termios.h>
 #include <unistd.h>
 
@@ -21,7 +23,9 @@
 struct termios
     orig_termios; // struct to store the terminal attributes read by tcgetattr
 
-struct editorConfig {
+struct editorConfig { // set global state foe the terminal
+  int screenrows;
+  int screencols;
   struct termios orig_termios;
 };
 
@@ -86,6 +90,18 @@ char editorReadKey(void) {
   return c;
 }
 
+int getWindowSize(int *rows, int *cols) {
+  struct winsize ws;
+
+  if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) == -1 || ws.ws_col == 0) {
+    return -1;
+  } else {
+    *cols = ws.ws_col;
+    *rows = ws.ws_row;
+    return 0;
+  }
+}
+
 /*** Input
  * ===========================================================================
  * ***/
@@ -129,8 +145,16 @@ void editorRefreshScreen(void) {
 
 /*** init
  * ======================================================================= ***/
+
+void initEditor(void) {
+  if (getWindowSize(&E.screenrows, &E.screencols) == -1)
+    die("getWindowSize");
+}
+
+// main
 int main(void) {
   enableRawMode();
+  initEditor();
 
   while (1) {
     editorRefreshScreen();
