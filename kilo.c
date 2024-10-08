@@ -58,7 +58,9 @@ void enableRawMode(void) {
     die("tcsetattr"); // apply terminal attributes
 }
 
-char editorReadKey() {
+/* it deals with low-level terminal input.*/
+char editorReadKey(void) {
+  /* This function's  job is to wait for one keypress and return it.*/
   int nread;
   char c;
   while ((nread = read(STDIN_FILENO, &c, 1)) != 1) {
@@ -68,13 +70,14 @@ char editorReadKey() {
   return c;
 }
 
-/*** output ***/
-
-void editorRefreshScreen() { write(STDIN_FILENO, "\x1b[2j", 4); }
-
-/*** input ***/
+/*** Input ***/
 // deals with mapping keys to editor functions at a much higher level
-void editorProcessKeypress() {
+
+void editorProcessKeypress(void) {
+  // This function waits for a keypress, and then handles it.
+  // Later it maps various ctrl key combinations and other special key to
+  // different editor functions.
+
   char c = editorReadKey();
 
   switch (c) {
@@ -82,6 +85,12 @@ void editorProcessKeypress() {
     exit(0);
     break;
   }
+}
+
+/*** output ***/
+void editorRefreshScreen(void) {
+  write(STDOUT_FILENO, "\x1b[2J", 4);
+  // write(STDOUT_FILENO, "\x1b[H", 3); // H command to postion the cursor
 }
 
 /*** init ***/
