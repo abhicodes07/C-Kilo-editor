@@ -24,6 +24,10 @@ struct termios
 // Expection handling
 // a function that prints an error message and  exits the program  .
 void die(const char *s) {
+  // clear screen on exit
+  write(STDOUT_FILENO, "\x1b[J", 4);
+  write(STDOUT_FILENO, "\x1b[H", 3);
+
   perror(s);
   exit(1);
 }
@@ -82,15 +86,30 @@ void editorProcessKeypress(void) {
 
   switch (c) {
   case CTRL_KEY('q'):
+    write(STDOUT_FILENO, "\x1b[2J", 4);
+    write(STDOUT_FILENO, "\x1b[H", 3);
     exit(0);
     break;
   }
 }
 
 /*** output ***/
+
+void editorDrawRows(void) {
+  int y;
+  for (y = 0; y < 24; y++) {
+    write(STDOUT_FILENO, "~\r\n", 3);
+  }
+}
+
 void editorRefreshScreen(void) {
+  // \x1b stands for escape character of 27 bytes
   write(STDOUT_FILENO, "\x1b[2J", 4);
   write(STDOUT_FILENO, "\x1b[H", 3); // H command to postion the cursor
+
+  editorDrawRows();
+
+  write(STDOUT_FILENO, "\x1b[H", 3);
 }
 
 /*** init ***/
