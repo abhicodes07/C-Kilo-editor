@@ -1,8 +1,5 @@
 /*** includes ***/
 
-#include <asm-generic/termbits.h>
-#include <bits/ioctl.h>
-#include <bits/termios_inlines.h>
 #include <ctype.h>
 #include <errno.h>
 #include <stdio.h>
