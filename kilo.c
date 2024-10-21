@@ -25,6 +25,7 @@ struct termios
     orig_termios; // struct to store the terminal attributes read by tcgetattr
 
 struct editorConfig { // set global state foe the terminal
+  int cx, cy;         // cursor positions
   int screenrows;
   int screencols;
   struct termios orig_termios;
@@ -164,6 +165,25 @@ void abFree(
  * ***/
 // deals with mapping keys to editor functions at a much higher level
 
+void editorMoveCursor(char key) {
+  /* Move cursor around with a, d, w, s
+   */
+  switch (key) {
+  case 'a':
+    E.cx--;
+    break;
+  case 'd':
+    E.cx++;
+    break;
+  case 'w':
+    E.cy--;
+    break;
+  case 's':
+    E.cy++;
+    break;
+  }
+}
+
 void editorProcessKeypress(void) {
   // This function waits for a keypress, and then handles it.
   // Later it maps various ctrl key combinations and other special key to
@@ -176,6 +196,13 @@ void editorProcessKeypress(void) {
     write(STDOUT_FILENO, "\x1b[2J", 4);
     write(STDOUT_FILENO, "\x1b[H", 3);
     exit(0);
+    break;
+
+  case 'w':
+  case 's':
+  case 'a':
+  case 'd':
+    editorMoveCursor(c);
     break;
   }
 }
@@ -220,8 +247,11 @@ void editorRefreshScreen(void) {
 
   editorDrawRows(&ab);
 
-  abAppend(&ab, "\x1b[H", 3);
-  abAppend(&ab, "\x1b[?25l", 6);
+  char buf[32];
+  snprintf(buf, sizeof(buf), "\x1b[%d;%dH", E.cy + 1, E.cx + 1);
+  abAppend(&ab, buf, strlen(buf));
+
+  abAppend(&ab, "\x1b[?25h", 6);
 
   write(STDOUT_FILENO, ab.b, ab.len);
   abFree(&ab);
@@ -231,6 +261,12 @@ void editorRefreshScreen(void) {
  * ======================================================================= ***/
 
 void initEditor(void) {
+  /* Here, we initialise cx and cy with value 0,
+   * as we want the cursor to start at the-left of the screen
+   */
+  E.cx = 0; // Horizontal coordinate of the cursor (column)
+  E.cy = 0; // Vertical coordinate of the cursor (row)
+
   if (getWindowSize(&E.screenrows, &E.screencols) == -1)
     die("getWindowSize");
 }
