@@ -5,6 +5,7 @@
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/ioctl.h>
 #include <termios.h>
 #include <unistd.h>
@@ -128,6 +129,34 @@ int getWindowSize(int *rows, int *cols) {
   }
 }
 
+/*** append buffer ***/
+
+struct abuf {
+  char *b; // pointer to our buffer in memory
+  int len; // length
+};
+
+#define ABUF_INIT {NULL, 0} // empty buffer
+
+void abAppend(struct abuf *ab, const char *s, int len) {
+  /* we ask realloc to gice us a block of memory that is the
+   * size of the current string plus the size of the string
+   * we are appending.
+   */
+  char *new = realloc(ab->b, ab->len + len);
+
+  if (new == NULL)
+    return;
+  memcpy(&new[ab->len], s, len);
+  ab->b = new;
+  ab->len += len;
+}
+
+void abFree(
+    struct abuf *ab) { // deallocates the dynamic memory used by an abuf.
+  free(ab->b);
+}
+
 /*** Input
  * ===========================================================================
  * ***/
@@ -152,25 +181,29 @@ void editorProcessKeypress(void) {
 /*** output
  * ======================================================================== ***/
 
-void editorDrawRows(void) {
+void editorDrawRows(struct abuf *ab) {
   int y;
   for (y = 0; y < E.screenrows; y++) {
-    write(STDOUT_FILENO, "~", 1);
-
+    abAppend(ab, "~", 1);
     if (y < E.screenrows - 1) {
-      write(STDOUT_FILENO, "\r\n", 2);
+      abAppend(ab, "\r\n", 2);
     }
   }
 }
 
 void editorRefreshScreen(void) {
   // \x1b stands for escape character of 27 bytes
-  write(STDOUT_FILENO, "\x1b[2J", 4);
-  write(STDOUT_FILENO, "\x1b[H", 3); // H command to postion the cursor
+  struct abuf ab = ABUF_INIT;
 
-  editorDrawRows();
+  abAppend(&ab, "\x1b[2j", 4);
+  abAppend(&ab, "\x1b[H", 3);
 
-  write(STDOUT_FILENO, "\x1b[H", 3);
+  editorDrawRows(&ab);
+
+  abAppend(&ab, "\x1b[H", 3);
+
+  write(STDOUT_FILENO, ab.b, ab.len);
+  abFree(&ab);
 }
 
 /*** init
