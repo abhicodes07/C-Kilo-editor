@@ -16,10 +16,9 @@
 
 #define CTRL_KEY(k) ((k) & 0x1f)
 
-/*** data
- * ===========================================================================
- * ***/
+enum editorKey { ARROW_LEFT = 1000, ARROW_RIGHT, ARROW_UP, ARROW_DOWN };
 
+/*** data ***/
 // struct to store original attributes of terminal
 struct termios
     orig_termios; // struct to store the terminal attributes read by tcgetattr
@@ -81,7 +80,7 @@ void enableRawMode(void) {
 }
 
 /* it deals with low-level terminal input.*/
-char editorReadKey(void) {
+int editorReadKey(void) {
   /* This function's  job is to wait for one keypress and return it.*/
   int nread;
   char c;
@@ -89,7 +88,30 @@ char editorReadKey(void) {
     if (nread == -1 && errno != EAGAIN)
       die("read");
   }
-  return c;
+
+  if (c == '\x1b') {
+    char seq[3];
+    if (read(STDIN_FILENO, &seq[0], 1) != 1)
+      return '\x1b';
+    if (read(STDIN_FILENO, &seq[1], 1) != 1)
+      return '\x1b';
+
+    if (seq[0] == '[') {
+      switch (seq[1]) {
+      case 'A':
+        return ARROW_UP;
+      case 'B':
+        return ARROW_DOWN;
+      case 'C':
+        return ARROW_RIGHT;
+      case 'D':
+        return ARROW_LEFT;
+      }
+    }
+    return '\x1b';
+  } else {
+    return c;
+  }
 }
 
 /* get cursor position */
@@ -165,20 +187,20 @@ void abFree(
  * ***/
 // deals with mapping keys to editor functions at a much higher level
 
-void editorMoveCursor(char key) {
+void editorMoveCursor(int key) {
   /* Move cursor around with a, d, w, s
    */
   switch (key) {
-  case 'a':
+  case ARROW_LEFT:
     E.cx--;
     break;
-  case 'd':
+  case ARROW_RIGHT:
     E.cx++;
     break;
-  case 'w':
+  case ARROW_UP:
     E.cy--;
     break;
-  case 's':
+  case ARROW_DOWN:
     E.cy++;
     break;
   }
@@ -189,7 +211,7 @@ void editorProcessKeypress(void) {
   // Later it maps various ctrl key combinations and other special key to
   // different editor functions.
 
-  char c = editorReadKey();
+  int c = editorReadKey();
 
   switch (c) {
   case CTRL_KEY('q'):
@@ -198,10 +220,10 @@ void editorProcessKeypress(void) {
     exit(0);
     break;
 
-  case 'w':
-  case 's':
-  case 'a':
-  case 'd':
+  case ARROW_UP:
+  case ARROW_DOWN:
+  case ARROW_LEFT:
+  case ARROW_RIGHT:
     editorMoveCursor(c);
     break;
   }
