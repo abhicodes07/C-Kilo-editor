@@ -48,6 +48,7 @@ typedef struct erow { // erow: editor row
 
 struct editorConfig { // set global state foe the terminal
   int cx, cy;         // cursor positions
+  int rowoff;         // row offset
   int screenrows;
   int screencols;
   int numrows;
@@ -300,7 +301,7 @@ void editorMoveCursor(int key) {
     }
     break;
   case ARROW_DOWN:
-    if (E.cy != E.screencols - 1) {
+    if (E.cy < E.numrows) {
       E.cy++;
     }
     break;
@@ -348,10 +349,23 @@ void editorProcessKeypress(void) {
 /*** output
  * ======================================================================== ***/
 
+void editorScroll() {
+  if (E.cy < E.rowoff) {
+    // Checks if the cursor if above the visible window
+    // if so, scroll up to where the cursor is.
+    E.rowoff = E.cy;
+  }
+  if (E.cy >= E.rowoff + E.screenrows) {
+    // checks if the cursor is past the bottom of the visible
+    // window
+    E.rowoff = E.cy - E.screenrows + 1;
+  }
+}
 void editorDrawRows(struct abuf *ab) {
   int y;
   for (y = 0; y < E.screenrows; y++) {
-    if (y >= E.numrows) {
+    int filerow = y + E.rowoff;
+    if (filerow >= E.numrows) {
       if (E.numrows == 0 && y == E.screenrows / 3) {
         char welcome[80];
         int welcomelen = snprintf(welcome, sizeof(welcome),
@@ -370,10 +384,10 @@ void editorDrawRows(struct abuf *ab) {
         abAppend(ab, "~", 1);
       }
     } else {
-      int len = E.row[y].size;
+      int len = E.row[filerow].size;
       if (len > E.screencols)
         len = E.screencols;
-      abAppend(ab, E.row[y].chars, len);
+      abAppend(ab, E.row[filerow].chars, len);
     }
 
     abAppend(ab, "\x1b[K", 3);
@@ -384,6 +398,8 @@ void editorDrawRows(struct abuf *ab) {
 }
 
 void editorRefreshScreen(void) {
+  editorScroll();
+
   // \x1b stands for escape character of 27 bytes
   struct abuf ab = ABUF_INIT;
 
@@ -393,7 +409,7 @@ void editorRefreshScreen(void) {
   editorDrawRows(&ab);
 
   char buf[32];
-  snprintf(buf, sizeof(buf), "\x1b[%d;%dH", E.cy + 1, E.cx + 1);
+  snprintf(buf, sizeof(buf), "\x1b[%d;%dH", (E.cy - E.rowoff) + 1, E.cx + 1);
   abAppend(&ab, buf, strlen(buf));
 
   abAppend(&ab, "\x1b[?25h", 6);
@@ -409,8 +425,9 @@ void initEditor(void) {
   /* Here, we initialise cx and cy with value 0,
    * as we want the cursor to start at the-left of the screen
    */
-  E.cx = 0; // Horizontal coordinate of the cursor (column)
-  E.cy = 0; // Vertical coordinate of the cursor (row)
+  E.cx = 0;     // Horizontal coordinate of the cursor (column) : default value
+  E.cy = 0;     // Vertical coordinate of the cursor (row) : default value
+  E.rowoff = 0; // scroll to the top of the file : default value
   E.numrows = 0;
   E.row = NULL;
 
