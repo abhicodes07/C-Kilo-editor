@@ -299,6 +299,9 @@ void editorMoveCursor(int key) {
   case ARROW_RIGHT:
     if (row && E.cx < row->size) { // Limit scrolling to the left
       E.cx++;
+    } else if (row && E.cx == row->size) {
+      E.cy++;
+      E.cx = 0;
     }
     break;
   case ARROW_UP:
