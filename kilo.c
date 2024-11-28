@@ -51,7 +51,8 @@ typedef struct erow { // erow: editor row
 
 struct editorConfig { // set global state foe the terminal
   int cx, cy;         // cursor positions
-  int rowoff;         // row offset
+  int rx;
+  int rowoff; // row offset
   int coloff;
   int screenrows;
   int screencols;
@@ -220,6 +221,17 @@ int getWindowSize(int *rows, int *cols) {
 }
 
 /*** row operations ***/
+
+int editorRowCxToRx(erow *row, int cx) {
+  int rx = 0;
+  int j;
+  for (j = 0; j < cx; j++) {
+    if (row->chars[j] == '\t')
+      rx += (KILO_TAB_STOP - 1) - (rx & KILO_TAB_STOP);
+    rx++;
+  }
+  return rx;
+}
 
 void editoUpdateRow(erow *row) {
   /* uses the chars string of an erow to fill in the contents of the render
@@ -405,6 +417,11 @@ void editorProcessKeypress(void) {
  * ======================================================================== ***/
 
 void editorScroll() {
+  E.rx = E.cx;
+  if (E.cy < E.numrows) {
+    E.rx = editorRowCxToRx(&E.row[E.cy], E.cx);
+  }
+
   if (E.cy < E.rowoff) {
     // Checks if the cursor if above the visible window
     // if so, scroll up to where the cursor is.
@@ -415,11 +432,11 @@ void editorScroll() {
     // window
     E.rowoff = E.cy - E.screenrows + 1;
   }
-  if (E.cx < E.coloff) {
-    E.coloff = E.cx;
+  if (E.rx < E.coloff) {
+    E.coloff = E.rx;
   }
-  if (E.cx >= E.coloff + E.screencols) {
-    E.coloff = E.cx - E.screencols + 1;
+  if (E.rx >= E.coloff + E.screencols) {
+    E.coloff = E.rx - E.screencols + 1;
   }
 }
 void editorDrawRows(struct abuf *ab) {
@@ -474,7 +491,7 @@ void editorRefreshScreen(void) {
   char buf[32];
   snprintf(buf, sizeof(buf), "\x1b[%d;%dH", (E.cy - E.rowoff) + 1, E.cx + 1);
   snprintf(buf, sizeof(buf), "\x1b[%d;%dH", (E.cy - E.rowoff) + 1,
-           (E.cx - E.coloff));
+           (E.rx - E.coloff));
   abAppend(&ab, buf, strlen(buf));
 
   abAppend(&ab, "\x1b[?25h", 6);
@@ -490,8 +507,9 @@ void initEditor(void) {
   /* Here, we initialise cx and cy with value 0,
    * as we want the cursor to start at the-left of the screen
    */
-  E.cx = 0;     // Horizontal coordinate of the cursor (column) : default value
-  E.cy = 0;     // Vertical coordinate of the cursor (row) : default value
+  E.cx = 0; // Horizontal coordinate of the cursor (column) : default value
+  E.cy = 0; // Vertical coordinate of the cursor (row) : default value
+  E.rx = 0;
   E.rowoff = 0; // scroll to the top of the file : default value
   E.coloff = 0; // scroll Horizontally
   E.numrows = 0;
